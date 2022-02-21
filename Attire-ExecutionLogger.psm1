@@ -10,7 +10,7 @@ function Start-ExecutionLog($startTime, $logPath, $targetHostname, $targetUser, 
     if($isWindows) {
         $ipAddress = (Get-NetIPAddress).IPAddress | Select-Object -first 1
     } else {
-        $ipAddress = (Test-Connection -ComputerName (hostname) -count 1 | Select Address).Address.toString()
+        $ipAddress = $(ifconfig | grep 'inet ' | grep -Fv 127.0.0.1 | awk '{print $2;exit}')
     }
 
     $target = [PSCustomObject]@{
