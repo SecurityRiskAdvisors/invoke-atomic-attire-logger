@@ -1,6 +1,8 @@
 # Attire-ExecutionLogger
 This is a PowerShell module that conforms to the logger API used by Invoke-AtomicRedTeam and generates ATTiRe logs that can be imported into VECTR.
 
+More information on the ATTiRe format and how to import logs into VECTR is available here: https://github.com/SecurityRiskAdvisors/ATTiRe
+
 To use the ATTiRe logger, first you must:
 
  1. Import Invoke-AtomicRedTeam
