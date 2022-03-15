@@ -10,7 +10,11 @@ function Start-ExecutionLog($startTime, $logPath, $targetHostname, $targetUser, 
     if($isWindows) {
         $ipAddress = (Get-NetIPAddress).IPAddress | Select-Object -first 1
     } else {
-        $ipAddress = $(ifconfig | grep 'inet ' | grep -Fv 127.0.0.1 | awk '{print $2;exit}')
+        if(Get-Command "ip" -ErrorAction SilentlyContinue) {
+            $ipAddress = $(ip a | grep 'inet ' | grep -Fv 127.0.0.1 | awk '{print $2;exit}')
+        } elseif(Get-Command "ifconfig" -ErrorAction SilentlyContinue) {
+            $ipAddress = $(ifconfig | grep 'inet ' | grep -Fv 127.0.0.1 | awk '{print $2;exit}')
+        }
     }
 
     $target = [PSCustomObject]@{
