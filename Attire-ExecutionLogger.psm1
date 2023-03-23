@@ -45,7 +45,7 @@ function Start-ExecutionLog($startTime, $logPath, $targetHostname, $targetUser, 
     $script:attireLog.'execution-data' = $executionData
 }
 
-function Write-ExecutionLog($startTime, $stopTime, $technique, $testNum, $testName, $testGuid, $testExecutor, $testDescription, $command, $logPath, $targetHostname, $targetUser, $stdOut, $stdErr, $isWindows) {
+function Write-ExecutionLog($startTime, $stopTime, $technique, $testNum, $testName, $testGuid, $testExecutor, $testDescription, $command, $logPath, $targetHostname, $targetUser, $res, $isWindows) {
 
     $startTime = (Get-Date($startTime).ToUniversalTime() -UFormat '+%Y-%m-%dT%H:%M:%S.000Z').ToString()
     $stopTime = (Get-Date($stopTime).ToUniversalTime() -UFormat '+%Y-%m-%dT%H:%M:%S.000Z').ToString()
@@ -65,22 +65,22 @@ function Write-ExecutionLog($startTime, $stopTime, $technique, $testNum, $testNa
     }
 
     $outputStdConole = [PSCustomObject]@{
-        content = $stdOut
+        content = $res.stdOut
         level = "STDOUT"
         type = "console"
     }
 
     $outputErrConole = [PSCustomObject]@{
-        content = $stdErr
+        content = $res.stdErr
         level = "STDERR"
         type = "console"
     }
 
-    if($stdOut.length -gt 0) {
+    if($res.stdOut.length -gt 0) {
         $step.output += $outputStdConole
     }
 
-    if($stdErr.length -gt 0) {
+    if($res.stdErr.length -gt 0) {
         $step.output += $outputErrConole
     }
 
