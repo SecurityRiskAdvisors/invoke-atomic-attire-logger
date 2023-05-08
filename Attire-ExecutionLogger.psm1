@@ -4,16 +4,62 @@
     'procedures'    = @()
 }
 
+function Get-PreferredIPAddress {
+    $ipAddresses = (Get-NetIPAddress).IPAddress
+    $ipv4Address = $null
+    $ipv6Address = $null
+    $firstAddress = $null
+
+    foreach ($ip in $ipAddresses) {
+        if (-not $firstAddress) {
+            $firstAddress = $ip
+        }
+
+        if ($ip -match '\d+\.\d+\.\d+\.\d+' -and $ip -ne '127.0.0.1') {
+            $ipv4Address = $ip
+            break
+        } elseif ($ip -match '\S+::\S+' -and -not $ipv6Address) {
+            $ipv6Address = $ip
+        }
+    }
+
+    if ($ipv4Address) {
+        return $ipv4Address
+    } elseif ($ipv6Address) {
+        return $ipv6Address
+    } elseif ($firstAddress) {
+        return $firstAddress
+    } else {
+        return "UNKNOWN"
+    }
+}
+
 function Start-ExecutionLog($startTime, $logPath, $targetHostname, $targetUser, $commandLine, $isWindows) {
 
     $ipAddress = ""
     if($isWindows) {
-        $ipAddress = (Get-NetIPAddress).IPAddress | Select-Object -first 1
+        $ipAddress = Get-PreferredIPAddress
     } else {
         if(Get-Command "ip" -ErrorAction SilentlyContinue) {
             $ipAddress = $(ip a | grep 'inet ' | grep -Fv 127.0.0.1 | awk '{print $2;exit}')
         } elseif(Get-Command "ifconfig" -ErrorAction SilentlyContinue) {
             $ipAddress = $(ifconfig | grep 'inet ' | grep -Fv 127.0.0.1 | awk '{print $2;exit}')
+        }
+    }
+
+
+    if($targetUser -isnot [string]) {
+        if([bool]($targetUser.PSobject.Properties.name -match "^value$")) {
+            $targetUser = $targetUser.value
+        }else {
+            $targetUser = $targetUser.ToString()
+        }
+    }
+    if($targetHostname -isnot [string]) {
+        if([bool]($targetHostname.PSobject.Properties.name -match "^value$")) {
+            $targetHostname = $targetHostname.value
+        }else {
+            $targetHostname = $targetHostname.ToString()
         }
     }
 
@@ -45,7 +91,7 @@ function Start-ExecutionLog($startTime, $logPath, $targetHostname, $targetUser, 
     $script:attireLog.'execution-data' = $executionData
 }
 
-function Write-ExecutionLog($startTime, $stopTime, $technique, $testNum, $testName, $testGuid, $testExecutor, $testDescription, $command, $logPath, $targetHostname, $targetUser, $stdOut, $stdErr, $isWindows) {
+function Write-ExecutionLog($startTime, $stopTime, $technique, $testNum, $testName, $testGuid, $testExecutor, $testDescription, $command, $logPath, $targetHostname, $targetUser, $res, $isWindows) {
 
     $startTime = (Get-Date($startTime).ToUniversalTime() -UFormat '+%Y-%m-%dT%H:%M:%S.000Z').ToString()
     $stopTime = (Get-Date($stopTime).ToUniversalTime() -UFormat '+%Y-%m-%dT%H:%M:%S.000Z').ToString()
@@ -64,24 +110,46 @@ function Write-ExecutionLog($startTime, $stopTime, $technique, $testNum, $testNa
         'output' = @()
     }
 
-    $outputStdConole = [PSCustomObject]@{
-        content = $stdOut
+    $stdOutContents = $res.StandardOutput
+    if($stdOutContents -isnot [string]) {
+        $stdOutContents = $stdOutContents.ToString()
+    }
+
+    $outputStdConsole = [PSCustomObject]@{
+        content = $stdOutContents
         level = "STDOUT"
         type = "console"
     }
 
-    $outputErrConole = [PSCustomObject]@{
-        content = $stdErr
+    $stdErrContents = $res.ErrorOutput
+    if($stdErrContents -isnot [string]) {
+        $stdErrContents = $stdErrContents.ToString()
+    }
+
+    $outputErrConsole = [PSCustomObject]@{
+        content = $stdErrContents
         level = "STDERR"
         type = "console"
     }
 
-    if($stdOut.length -gt 0) {
-        $step.output += $outputStdConole
+    [bool] $foundOutput = $false
+    if($res.StandardOutput.length -gt 0) {
+        $foundOutput = $true
+        $step.output += $outputStdConsole
     }
 
-    if($stdErr.length -gt 0) {
-        $step.output += $outputErrConole
+    if($res.ErrorOutput.length -gt 0) {
+        $foundOutput = $true
+        $step.output += $outputErrConsole
+    }
+
+    if (!$foundOutput) {
+        $emptyOutput = [PSCustomObject]@{
+            content = ""
+            level = "STDOUT"
+            type = "console"
+        }
+        $step.output += $emptyOutput
     }
 
     $procedure = [PSCustomObject]@{
