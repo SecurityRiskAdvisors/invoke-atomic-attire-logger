@@ -122,7 +122,7 @@ function Write-ExecutionLog($startTime, $stopTime, $technique, $testNum, $testNa
     }
 
     $stdErrContents = $res.ErrorOutput
-	   if(($stdErrContents -isnot [string]) -and ($stdErrContents -ne $null)) {
+    if(($stdErrContents -isnot [string]) -and ($stdErrContents -ne $null)) {
         $stdErrContents = $stdErrContents.ToString()
     }
 
